@@ -1,4 +1,5 @@
 :root {
+  --base-color: #007bff;
   --grey-bg: #858585;
   --blue-bg: #007bff;
   --red-bg: #dc3545;
@@ -52,10 +53,21 @@ div {
     cursor: pointer;
 
     &.active {
+      position: relative;
       background-color: #ececec;
 
       .title {
         color: #000;
+      }
+
+      &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 3px;
+        height: 100%;
+        background-color: var(--base-color);
       }
     }
 
@@ -133,6 +145,22 @@ div {
 
       .group-card-item {
         cursor: pointer;
+
+        &.status-loading {
+          &::before {
+            content: "";
+            display: block;
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            z-index: 99999999;
+            background-color: var(--base-color);
+
+            mask-image: url("data:image/svg+xml,%3Csvg width='40' height='40' stroke='%23000' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E.spinner_V8m1%7Btransform-origin:center;animation:spinner_zKoa 2s linear infinite%7D.spinner_V8m1 circle%7Bstroke-linecap:round;animation:spinner_YpZS 1.5s ease-out infinite%7D%40keyframes spinner_zKoa%7B100%25%7Btransform:rotate(360deg)%7D%7D%40keyframes spinner_YpZS%7B0%25%7Bstroke-dasharray:0 150;stroke-dashoffset:0%7D47.5%25%7Bstroke-dasharray:42 150;stroke-dashoffset:-16%7D95%25%2C100%25%7Bstroke-dasharray:42 150;stroke-dashoffset:-59%7D%7D%3C%2Fstyle%3E%3Cg class='spinner_V8m1'%3E%3Ccircle cx='12' cy='12' r='9.5' fill='none' stroke-width='1'%3E%3C%2Fcircle%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+          }
+        }
 
         &.active {
           background-color: #ececec;
@@ -212,7 +240,7 @@ div {
     font-weight: 500;
 
     &.active {
-      background-color: #007bff;
+      background-color: var(--base-color);
       color: #fff;
       font-weight: 600;
 
@@ -237,7 +265,7 @@ input.input-search {
   // height: 40px;
   border: 4px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
-  border-top-color: #007bff;
+  border-top-color: var(--base-color);
   animation: spin 1s ease-in-out infinite;
 
   position: absolute;
@@ -246,11 +274,15 @@ input.input-search {
   transform: translate(-50%, -50%);
   z-index: 9999;
   background-color: #fff;
-  
+
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+.wrap-fav-icon {
+  .animate-spin {}
 }

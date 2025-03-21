@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSelector, useDispatch } from "react-redux";
-import { setWindowActiveShowTabList, setIdEditingColorGroupArchive } from "./store/features/app";
+import { setWindowActiveShowTabList, setIdEditingColorGroupArchive, setIsShowContextMenuCurrentTabList } from "./store/features/app";
 import { setTabsActive, setTabs } from "./store/features/tab";
 import { setGroups } from "./store/features/group";
 import { setBookmarks } from "./store/features/bookmark";
@@ -71,6 +71,20 @@ const App = () => {
   };
   const loadGroupsArchive = async () => {
     let groupsArchive = await ChromeExt.storage.get(KEY_GROUPS_ARCHIVE) ?? [];
+
+    // Check tabs in group archive
+    // groupsArchive = groupsArchive.map((group) => {
+    //   if (!group.tabs) {
+    //     group.tabs = [];
+    //   }
+    //   return group;
+    // });
+
+    // Filter group not have tabs
+    groupsArchive = groupsArchive.filter((group) => group.tabs && group.tabs.length > 0);
+
+    console.log(groupsArchive);
+    
     
     dispatch(setGroupsArchive(groupsArchive));
   };
@@ -102,11 +116,20 @@ const App = () => {
       console.log(`Storage key "${KEY_GROUPS_ARCHIVE}" in namespace "${area}" changed.`);
       
       if (KEY_GROUPS_ARCHIVE in changes) {
-        let newValue = changes[KEY_GROUPS_ARCHIVE].newValue;
-        if (newValue) {
-          console.log(newValue);
+        let groupsArchive = changes[KEY_GROUPS_ARCHIVE].newValue;
+        if (groupsArchive) {
+
+          // groupsArchive = groupsArchive.map((group) => {
+          //   if (!group.tabs) {
+          //     group.tabs = [];
+          //   }
+          //   return group;
+          // });
+
+          // Filter group not have tabs
+          groupsArchive = groupsArchive.filter((group) => group.tabs && group.tabs.length > 0);
           
-          dispatch(setGroupsArchive(newValue));
+          dispatch(setGroupsArchive(groupsArchive));
         }
       }
     });
@@ -118,6 +141,7 @@ const App = () => {
     if (target.classList.contains("action")) return;
 
     dispatch(setIdEditingColorGroupArchive(null));
+    dispatch(setIsShowContextMenuCurrentTabList(false));
   };
   const handlerWindowActiveShowTabList = (windowId) => {
     setPageActive("tab_list_in_window");

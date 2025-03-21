@@ -50,8 +50,10 @@ const GroupsArchive = () => {
 
       // Remove group empty
       groups = groups.filter((group) => group.tabs.length > 0);
+
     }
 
+    console.log(groups);
     return groups;
   };
 
@@ -63,7 +65,7 @@ const GroupsArchive = () => {
     // For sure group exist
     let isGroupCurrent = await ChromeExt.getGroupById(group.id, true);
     console.log(isGroupCurrent);
-    
+
     if (group.is_current) {
       if (!isGroupCurrent) {
         ChromeExt.storage.updateFlagIsCurrentGroupArchive(group.id, false);
@@ -83,7 +85,7 @@ const GroupsArchive = () => {
       dispatch(setIdEditingColorGroupArchive(null));
     }
   };
-  const handleClickTabItemInGroup = async (event, tab) => {
+  const handleClickTabItemInGroup = async (event, tab, group) => {
     let { id } = tab;
 
     let tabExt = await ChromeExt.getTabById(id, true);
@@ -91,7 +93,13 @@ const GroupsArchive = () => {
       ChromeExt.setTabActive(id);
     }
     else {
-      ChromeExt.createTab({ url: tab.url });
+      let tabResult = await ChromeExt.createTab({ url: tab.url });
+
+      // if (group.is_current) {
+      //   // Update tab id in group
+      //   await ChromeExt.storage.updateIdTabsForTabsGroupArchive(group.id, [{ oldId: id, newId: tabResult.id }]);
+      //   await ChromeExt.createGroup({ tabIds: tabResult.id, groupId: group.id });
+      // }
     }
   };
   const handlerRemoveGroupArchive = (event, group) => {
@@ -108,10 +116,17 @@ const GroupsArchive = () => {
     let tabs = [...group.tabs];
     if (isInThisBrowser) {
       let tabIds = [];
+      let tabIdNeedUpdateList = [];
       for (let i = 0; i < tabs.length; i++) {
-        let tabResult = await ChromeExt.createTab({ url: tabs[i].url });
+        let { id, url } = tabs[i];
+        let tabResult = await ChromeExt.createTab({ url });
         tabIds.push(tabResult.id);
+
+        tabIdNeedUpdateList.push({ oldId: id, newId: tabResult.id });
       }
+
+      // Update tab id in group
+      await ChromeExt.storage.updateIdTabsForTabsGroupArchive(group.id, tabIdNeedUpdateList);
 
       let groupIdResult = await ChromeExt.createGroup({ tabIds });
       ChromeExt.updateGroup(groupIdResult, {
@@ -171,7 +186,6 @@ const GroupsArchive = () => {
   };
 
   // Constants
-  const CONTEXT_MENU_ITEMS = [];
   const COLOR_SETTING = ["grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan", "orange",];
 
   // Constants
@@ -291,10 +305,11 @@ const GroupsArchive = () => {
             >
               {group.tabs.map((tab) => (
                 <div key={tab.id}
-                  className={`action group-card-item action flex items-center px-4 py-2 select-none 
+                  className={`action group-card-item action flex items-center px-4 py-2 select-none relative
+                    status-${tab.status}
                     ${isTabActive(tab) ? "active" : ""}
                     ${tabsSelected.find((t) => t.id === tab.id) ? "active" : ""} `}
-                  onClick={(event) => handleClickTabItemInGroup(event, tab)}
+                  onClick={(event) => handleClickTabItemInGroup(event, tab, group)}
                 >
                   <img src={tab.favIconUrl || getIconUrl(tab.url)} alt={`${tab.title} icon`} className="w-6 h-6 mr-2 event-none" />
                   <div className="overflow-hidden event-none">

@@ -268,6 +268,37 @@ const ChromeExt = {
       });
     },
 
+    /**
+     * Update tab ID in groups archive
+     * 
+     * @param {number} groupId Group ID
+     * @param {Array} tabIdNeedUpdateList List tab ID need update. Ex: [{newId: 1, oldId: 2}]
+     * @returns {Promise<Array>} List groups archive
+     */
+    updateIdTabsForTabsGroupArchive: (groupId, tabIdNeedUpdateList) => {
+      return new Promise((resolve, reject) => {
+        chrome.storage.local.get([KEY_GROUPS_ARCHIVE], (result) => {
+          let groupsArchive = result[KEY_GROUPS_ARCHIVE] || [];
+
+          let index = groupsArchive.findIndex((group) => group.id === groupId);
+          if (index !== -1) {
+            let tabs = groupsArchive[index].tabs;
+            tabIdNeedUpdateList.forEach((item) => {
+              let tab = tabs.find((tab) => tab.id === item.oldId);
+              if (tab) {
+                tab.id = item.newId;
+              }
+            });
+            groupsArchive[index].tabs = tabs;
+          }
+
+          chrome.storage.local.set({ [KEY_GROUPS_ARCHIVE]: groupsArchive }, () => {
+            resolve(groupsArchive);
+          });
+        });
+      });
+    },
+
     updateIdGroupsArchive: (groupId, newGroupId) => {
       return new Promise((resolve, reject) => {
         chrome.storage.local.get([KEY_GROUPS_ARCHIVE], (result) => {
