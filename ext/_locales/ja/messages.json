@@ -1,0 +1,11 @@
+{
+  "extension_name": {
+    "message": "Tab manager extension"
+  },
+  "extension_description": {
+    "message": "This extension helps you manage your tabs"
+  },
+  "extension_action_default_title": {
+    "message": "Open side panel"
+  }
+}

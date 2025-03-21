@@ -1,0 +1,1 @@
+export const KEY_GROUPS_ARCHIVE = "groups_archive";

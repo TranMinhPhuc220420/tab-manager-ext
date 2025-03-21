@@ -1,0 +1,33 @@
+{
+	"manifest_version": 3,
+	"name": "Tab manager extension",
+	"description": "This extension helps you manage your tabs",
+	"version": "1.1",
+
+	"permissions": [
+		"tabs",
+		"tabGroups",
+		"activeTab",
+		"storage",
+		"sidePanel"
+	],
+
+	"background": {
+			"service_worker": "background.js"
+	},
+
+	"icons": {
+			"32": "images/32.png",
+			"48": "images/48.png",
+			"96": "images/96.png",
+			"128": "images/128.png"
+	},
+
+	"action": {
+			"default_title": "__MSG_extension_action_default_title__"
+	},
+
+	"side_panel": {
+			"default_path": "index.html"
+	}
+}
