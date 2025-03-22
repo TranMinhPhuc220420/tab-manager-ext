@@ -110,8 +110,8 @@
       id: tab.id,
       title: tab.title,
       url: tab.url,
-      favIconUrl: tab.favIconUrl || tab.pendingUrl,
-      status: tab.status,
+      favIconUrl: tab.favIconUrl,
+      // status: tab.status,
     }
 
     let { groupId } = tab;
@@ -135,8 +135,8 @@
             id: tab.id,
             title: title || tab.title,
             url: url || tab.url,
-            favIconUrl: favIconUrl || tab.favIconUrl || tab.pendingUrl,
-            status: status || tab.status,
+            favIconUrl: favIconUrl || tab.favIconUrl,
+            // status: tab.status,
           };
         }
         else {
@@ -148,7 +148,7 @@
         // groups[index].tabs = [paramsTab];
       }
 
-      groups[index].is_current = true;
+      // groups[index].is_current = true;
       console.log(groups[index]);
       
       await setStorage(KEY_GROUPS_ARCHIVE, groups);
@@ -159,7 +159,7 @@
     console.log(tabId, moveInfo);
   };
   chrome.tabs.onMoved.addListener(onTabsMove);
-  chrome.tabs.onUpdated.addListener(onTabsChange);
+  // chrome.tabs.onUpdated.addListener(onTabsChange);
 
   // Groups
   const getGroupById = (groupId, byQuery = false) => {
@@ -179,12 +179,12 @@
   };
   const onGroupCreate = async (group) => {
     console.log('onGroupCreate', group);
-    await sleep(50);
+    // await sleep(50);
 
     let { id } = group;
     let tabs = await getTabsByGroupId(id);
 
-    group.is_current = true;
+    // group.is_current = true;
     group.tabs = tabs.map((tab) => {
       return {
         id: tab.id,
@@ -199,7 +199,7 @@
   };
   const onGroupUpdate = async (group) => {
     console.log('onGroupUpdate', group);
-    await sleep(100);
+    // await sleep(100);
 
     let { id } = group;
     let groups = await getStorage(KEY_GROUPS_ARCHIVE);
@@ -207,7 +207,7 @@
 
     if (index !== -1) {
       groups[index] = { ...groups[index], ...group };
-      groups[index].is_current = true;
+      // groups[index].is_current = true;
 
       let groupArchive = groups[index];
       let tabsArchive = groupArchive.tabs;
@@ -219,13 +219,13 @@
             id: tab.id,
             title: tab.title,
             url: tab.url,
-            favIconUrl: tab.favIconUrl || tab.pendingUrl,
-            status: tab.status,
+            favIconUrl: tab.favIconUrl,
+            // status: tab.status,
           };
         });
       }
       else {
-        if (tabs.length >= tabsArchive.length) {
+        if (tabs.length > 0) {
           for (let i = 0; i < tabs.length; i++) {
             const tab = tabs[i];
             
@@ -236,8 +236,8 @@
                 id: tab.id,
                 title: title || tab.title,
                 url: url || tab.url,
-                favIconUrl: favIconUrl || tab.favIconUrl || tab.pendingUrl,
-                status: status || tab.status,
+                favIconUrl: tab.favIconUrl,
+                // status: tab.status,
               };
             }
             else {
@@ -245,8 +245,8 @@
                 id: tab.id,
                 title: tab.title,
                 url: tab.url,
-                favIconUrl: tab.favIconUrl || tab.pendingUrl,
-                status: tab.status,
+                favIconUrl: tab.favIconUrl,
+                // status: tab.status,
               });
             }
           }
@@ -265,7 +265,7 @@
       await setStorage(KEY_GROUPS_ARCHIVE, groups);
     }
     else {
-      group.is_current = true;
+      // group.is_current = true;
       addGroupArchiveToStorage(group);
     }
   };
@@ -278,18 +278,17 @@
     let index = groups.findIndex((g) => g.id === id);
 
     if (index !== -1) {
-      groups[index].is_current = false;
+      // groups[index].is_current = false;
       console.log(groups[index]);
 
       let tabs = await getTabsByGroupId(id);
       console.log('tt', tabs);
       
-      
       await setStorage(KEY_GROUPS_ARCHIVE, groups);
     }
   };
-  chrome.tabGroups.onCreated.addListener(onGroupCreate);
+  // chrome.tabGroups.onCreated.addListener(onGroupCreate);
   chrome.tabGroups.onUpdated.addListener(onGroupUpdate);
-  chrome.tabGroups.onRemoved.addListener(onGroupRemove);
+  // chrome.tabGroups.onRemoved.addListener(onGroupRemove);
 
 }());

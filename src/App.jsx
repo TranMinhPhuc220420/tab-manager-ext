@@ -4,20 +4,17 @@ import { useTranslation } from "react-i18next";
 
 import { useSelector, useDispatch } from "react-redux";
 import { setWindowActiveShowTabList, setIdEditingColorGroupArchive, setIsShowContextMenuCurrentTabList } from "./store/features/app";
+import { setWindows } from "./store/features/window";
 import { setTabsActive, setTabs } from "./store/features/tab";
 import { setGroups } from "./store/features/group";
-import { setBookmarks } from "./store/features/bookmark";
-import { setCurrent, setWindows } from "./store/features/window";
 import { setGroupsArchive } from "./store/features/archive";
 
 import ChromeExt from "./chrome_ext";
 import { KEY_GROUPS_ARCHIVE } from "./constants";
-import { web_asset_svg, bookmark_svg } from "./svg_icon";
 
 import FormSearch from "./components/form/FormSearch";
 import BottomToolbar from "./components/toolbar/BottomToolbar";
 import CurrentTabList from "./components/list/CurrentTabList";
-import BookmarkList from "./components/list/BookmarkList";
 import GroupsArchive from "./components/list/GroupsArchive";
 
 const App = () => {
@@ -26,22 +23,46 @@ const App = () => {
 
   // Redux
   const dispatch = useDispatch();
-  const windows = useSelector((state) => state.window_manager.windows);
-  const windowActiveShowTabList = useSelector((state) => state.app_manager.window_active_show_tab_list);
+  const groupsArchive = useSelector((state) => state.archive_manager.groups);
 
   // State
-  const [pageActive, setPageActive] = useState("tab_list_in_window");
 
   // Process func
   const loadTabs = async () => {
     let tabs = await ChromeExt.getTabs();
 
+    // // Update tabs in groups archive
+    // const groupsArchiveClone = [...groupsArchive];
+    // for (let i = 0; i < groupsArchiveClone.length; i++) {
+    //   let {id, tabs} = groupsArchiveClone[i];
+    //   // let tabsArchive = group.tabs;
+
+    //   for (let i = 0; i < tabs.length; i++) {
+    //     const tabArchive = tabs[i];
+
+    //     let indexTab = tabs.findIndex((t) => (t.id === tabArchive.id && t.groupId === id));
+    //     if (indexTab !== -1) {
+    //       let { title, url, favIconUrl, status } = tabs[indexTab];
+    //       tabs[i] = {
+    //         title: title || tabArchive.title,
+    //         url: url || tabArchive.url,
+    //         favIconUrl: favIconUrl || tabArchive.favIconUrl || tabArchive.pendingUrl,
+    //         status: status,
+    //       };
+    //     }
+
+    //   }
+
+    //   group.tabs = tabs;
+    //   groupsArchiveClone[i] = group;
+    // }
+    // dispatch(setGroupsArchive(groupsArchiveClone));
+
     // Filter tab have groupId
     tabs = tabs.filter((tab) => tab.groupId === -1);
-
     // Filter tab empty url or title
     tabs = tabs.filter((tab) => tab.url && tab.title);
-    
+
     dispatch(setTabs(tabs));
   };
   const loadTabActive = async () => {
@@ -55,10 +76,6 @@ const App = () => {
     }
     dispatch(setGroups(groups));
   };
-  // const loadBookmarks = async () => {
-  //   let bookmarks = await ChromeExt.storage.getBookmarkGroups();
-  //   dispatch(setBookmarks(bookmarks));
-  // };
   const loadWindows = async () => {
     let windowsRes = await ChromeExt.getWindows();
     dispatch(setWindows(windowsRes));
@@ -69,23 +86,40 @@ const App = () => {
       dispatch(setWindowActiveShowTabList("all_window"));
     }
   };
-  const loadGroupsArchive = async () => {
+  const loadGroupsArchive = async (action) => {
     let groupsArchive = await ChromeExt.storage.get(KEY_GROUPS_ARCHIVE) ?? [];
 
-    // Check tabs in group archive
-    // groupsArchive = groupsArchive.map((group) => {
-    //   if (!group.tabs) {
-    //     group.tabs = [];
+    // Set flag is_current for group
+    for (let i = 0; i < groupsArchive.length; i++) {
+      let { id } = groupsArchive[i];
+      let group = await ChromeExt.getGroupById(id, true);
+      groupsArchive[i] = { ...groupsArchive[i], ...group };
+      groupsArchive[i].is_current = group ? true : false;
+
+      // if (action == 'load_tabs') {
+        let tabs = groupsArchive[i].tabs;
+        let tabsCurrent = await ChromeExt.getTabsByGroupId(id);
+        if (!tabs || tabsCurrent.length > 0) {
+          groupsArchive[i].tabs = tabsCurrent;
+        }
+      // }
+    }
+
+    // if (action == 'load_tabs') {
+    //   // Remove group have tabs empty
+    //   for (let i = 0; i < groupsArchive.length; i++) {
+    //     const { id, tabs } = groupsArchive[i];
+    //     if (!tabs || tabs.length === 0) {
+    //       ChromeExt.storage.removeGroupsArchiveById(id);
+    //     }
     //   }
-    //   return group;
-    // });
+    // }
 
     // Filter group not have tabs
-    groupsArchive = groupsArchive.filter((group) => group.tabs && group.tabs.length > 0);
-
     console.log(groupsArchive);
-    
-    
+    // groupsArchive = groupsArchive.filter((group) => group.tabs && group.tabs.length > 0);
+    // console.log(groupsArchive);
+
     dispatch(setGroupsArchive(groupsArchive));
   };
   const loadData = () => {
@@ -104,32 +138,23 @@ const App = () => {
       loadTabs();
       loadGroups();
       loadTabActive();
+      loadGroupsArchive('load_tabs');
     });
-    // ChromeExt.onGroupChange((event) => {
-    //   loadTabs();
-    //   loadGroups();
-    // });
-    // ChromeExt.onWindowChange((event) => {
-    //   loadWindows();
-    // });
+    ChromeExt.onGroupChange((event) => {
+      loadTabs();
+      loadGroups();
+      loadGroupsArchive();
+    });
+    ChromeExt.onWindowChange((event) => {
+      loadWindows();
+    });
     ChromeExt.storage.onChange((changes, area) => {
       console.log(`Storage key "${KEY_GROUPS_ARCHIVE}" in namespace "${area}" changed.`);
       
       if (KEY_GROUPS_ARCHIVE in changes) {
         let groupsArchive = changes[KEY_GROUPS_ARCHIVE].newValue;
         if (groupsArchive) {
-
-          // groupsArchive = groupsArchive.map((group) => {
-          //   if (!group.tabs) {
-          //     group.tabs = [];
-          //   }
-          //   return group;
-          // });
-
-          // Filter group not have tabs
-          groupsArchive = groupsArchive.filter((group) => group.tabs && group.tabs.length > 0);
-          
-          dispatch(setGroupsArchive(groupsArchive));
+          loadGroupsArchive();
         }
       }
     });
@@ -142,14 +167,6 @@ const App = () => {
 
     dispatch(setIdEditingColorGroupArchive(null));
     dispatch(setIsShowContextMenuCurrentTabList(false));
-  };
-  const handlerWindowActiveShowTabList = (windowId) => {
-    setPageActive("tab_list_in_window");
-    dispatch(setWindowActiveShowTabList(windowId));
-  };
-  const handlerClickShowBookmarkList = () => {
-    setPageActive("bookmark");
-    dispatch(setWindowActiveShowTabList(null));
   };
 
   // Lifecycle

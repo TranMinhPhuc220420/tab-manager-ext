@@ -26,10 +26,8 @@ const GroupsArchive = () => {
   const idGroupEditingColor = useSelector((state) => state.app_manager.id_editing_color_group_archive);
 
   // State
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [tabsSelected, setTabsSelected] = useState([]);
   const [groupsEditTitle, setGroupsEditTitle] = useState([]);
-  const [showDoneIcon, setShowDoneIcon] = useState([]);
 
   // Process func
   const isTabActive = (tab) => {
@@ -52,9 +50,10 @@ const GroupsArchive = () => {
       groups = groups.filter((group) => group.tabs.length > 0);
 
     }
-
-    console.log(groups);
     return groups;
+  };
+  const processImageError = (event) => {
+    event.target.src = getIconUrl("chrome://favicon");
   };
 
   // Handler func
@@ -64,8 +63,6 @@ const GroupsArchive = () => {
 
     // For sure group exist
     let isGroupCurrent = await ChromeExt.getGroupById(group.id, true);
-    console.log(isGroupCurrent);
-
     if (group.is_current) {
       if (!isGroupCurrent) {
         ChromeExt.storage.updateFlagIsCurrentGroupArchive(group.id, false);
@@ -75,10 +72,11 @@ const GroupsArchive = () => {
         ChromeExt.collapseGroupAndCurrentWindow(group.id, !group.collapsed);
       }
     }
-
-    // Dispatch action collapse group
-    ChromeExt.storage.updateCollapsedGroupArchive(group.id, !group.collapsed);
-    dispatch(setCollapseGroupArchive({ id: group.id, collapsed: !group.collapsed }));
+    else {
+      // Dispatch action collapse group
+      ChromeExt.storage.updateCollapsedGroupArchive(group.id, !group.collapsed);
+      dispatch(setCollapseGroupArchive({ id: group.id, collapsed: !group.collapsed }));
+    }
 
     // Close color setting
     if (group.id != idGroupEditingColor) {
@@ -109,9 +107,6 @@ const GroupsArchive = () => {
   };
   const handlerCreateGroupWithTabsArchive = async (event, isInThisBrowser, group) => {
     event.stopPropagation();
-
-    if (isCreatingGroup) return;
-    setIsCreatingGroup(true);
 
     let tabs = [...group.tabs];
     if (isInThisBrowser) {
@@ -155,10 +150,6 @@ const GroupsArchive = () => {
 
       await ChromeExt.storage.updateIdGroupsArchive(group.id, groupIdResult);
     }
-
-    setTimeout(() => {
-      setIsCreatingGroup(false);
-    }, 500);
   };
   const handlerShowContextMenuGroupArchive = (event, group) => {
     event.stopPropagation();
@@ -243,17 +234,9 @@ const GroupsArchive = () => {
                 <div className="toolbar-top flex items-center">
                   {!group.is_current ?
                     (<>
-                      {!isCreatingGroup ?
-                        (<div className="create-group-and-tabs-archive ml-2" onClick={(event) => handlerCreateGroupWithTabsArchive(event, true, group)}>
-                          <div className="pointer-events-none">{open_in_browser_svg()}</div>
-                        </div>)
-                        :
-                        (<div className="create-group-and-tabs-archive ml-2">
-                          <div className="pointer-events-none">
-                            <div className="w-4 h-4 border-2 border-t-2 border-t-transparent border-white-100 rounded-full animate-spin"></div>
-                          </div>
-                        </div>)
-                      }
+                      <div className="create-group-and-tabs-archive ml-2" onClick={(event) => handlerCreateGroupWithTabsArchive(event, true, group)}>
+                        <div className="pointer-events-none">{open_in_browser_svg()}</div>
+                      </div>
 
                       <div className="create-group-and-tabs-archive ml-2" onClick={(event) => handlerCreateGroupWithTabsArchive(event, false, group)}>
                         <div className="pointer-events-none">
@@ -311,7 +294,7 @@ const GroupsArchive = () => {
                     ${tabsSelected.find((t) => t.id === tab.id) ? "active" : ""} `}
                   onClick={(event) => handleClickTabItemInGroup(event, tab, group)}
                 >
-                  <img src={tab.favIconUrl || getIconUrl(tab.url)} alt={`${tab.title} icon`} className="w-6 h-6 mr-2 event-none" />
+                  <img src={tab.favIconUrl || getIconUrl(tab.url)} alt={`${tab.title} icon`} className="w-6 h-6 mr-2 event-none" onError={processImageError} />
                   <div className="overflow-hidden event-none">
                     <div className="title text-gray-500 font-semibold truncate"> {tab.title} </div>
                     <div className="text-xs text-gray-500 truncate"> {tab.url} </div>
