@@ -199,7 +199,7 @@
   };
   const onGroupUpdate = async (group) => {
     console.log('onGroupUpdate', group);
-    // await sleep(100);
+    await sleep(200);
 
     let { id } = group;
     let groups = await getStorage(KEY_GROUPS_ARCHIVE);

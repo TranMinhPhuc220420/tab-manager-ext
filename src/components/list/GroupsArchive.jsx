@@ -3,15 +3,15 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSelector, useDispatch } from "react-redux";
-import { setIdEditingColorGroupArchive } from "../../store/features/app";
+import { setIdEditingTitleGroupsArchive, setIdEditingColorGroupArchive, setIdGroupArchiveShowContextMenu } from "../../store/features/app";
 import { setTitleGroupArchive, setCollapseGroupArchive, setColorGroupArchive, setFlagIsCurrentGroupArchive } from "../../store/features/archive";
 
 import ChromeExt from "../../chrome_ext";
-import { getIconUrl } from "../../utils";
+import { getIconUrl, randomBetween } from "../../utils";
 
 import {
   expand_more_svg, open_in_browser_svg, open_in_new_svg, close_svg, more_vert_svg,
-  edit_svg, done_svg, palette_svg,
+  edit_svg, done_svg, palette_svg, remove_svg,
 } from "../../svg_icon";
 
 const GroupsArchive = () => {
@@ -23,11 +23,12 @@ const GroupsArchive = () => {
   const tabsActive = useSelector((state) => state.tab_manager.tabsActive);
   const groups = useSelector((state) => state.archive_manager.groups);
   const keySearch = useSelector((state) => state.app_manager.key_search);
+  const groupsEditTitle = useSelector((state) => state.app_manager.id_editing_title_groups_archive);
   const idGroupEditingColor = useSelector((state) => state.app_manager.id_editing_color_group_archive);
+  const idGroupShowContextMenu = useSelector((state) => state.app_manager.id_group_archive_show_context_menu);
 
   // State
   const [tabsSelected, setTabsSelected] = useState([]);
-  const [groupsEditTitle, setGroupsEditTitle] = useState([]);
 
   // Process func
   const isTabActive = (tab) => {
@@ -46,10 +47,20 @@ const GroupsArchive = () => {
         return { ...group, tabs };
       });
 
-      // Remove group empty
-      groups = groups.filter((group) => group.tabs.length > 0);
-
     }
+
+    // Remove group empty
+    groups = groups.filter((group) => {
+      let tabs = group.tabs;
+
+      if (!tabs || tabs.length === 0) {
+        ChromeExt.storage.removeGroupsArchiveById(group.id);
+        return false;
+      }
+
+      return true;
+    });
+
     return groups;
   };
   const processImageError = (event) => {
@@ -101,12 +112,12 @@ const GroupsArchive = () => {
     }
   };
   const handlerRemoveGroupArchive = (event, group) => {
-    event.stopPropagation();
+    // event.stopPropagation();
 
     ChromeExt.storage.removeGroupsArchiveById(group.id);
   };
   const handlerCreateGroupWithTabsArchive = async (event, isInThisBrowser, group) => {
-    event.stopPropagation();
+    // event.stopPropagation();
 
     let tabs = [...group.tabs];
     if (isInThisBrowser) {
@@ -152,12 +163,15 @@ const GroupsArchive = () => {
     }
   };
   const handlerShowContextMenuGroupArchive = (event, group) => {
-    event.stopPropagation();
+    // event.stopPropagation();
+    let { id } = group;
+    dispatch(setIdGroupArchiveShowContextMenu((idGroupShowContextMenu === id) ? null : id));
   };
   const handlerClickShowEditTitleGroup = (event, group) => {
+    let groupEditingTitleGroup;
     // Add group id to list edit title
     if (!groupsEditTitle.includes(group.id)) {
-      setGroupsEditTitle([...groupsEditTitle, group.id]);
+      groupEditingTitleGroup = [...groupsEditTitle, group.id];
 
       setTimeout(() => {
         let input = document.querySelector(".group-title-input");
@@ -165,19 +179,40 @@ const GroupsArchive = () => {
       }, 100);
     } else {
       ChromeExt.setTitleGroup(group.id, group.title);
-      setGroupsEditTitle(groupsEditTitle.filter((id) => id !== group.id));
+      groupEditingTitleGroup = groupsEditTitle.filter((id) => id !== group.id);
     }
+
+    dispatch(setIdEditingTitleGroupsArchive(groupEditingTitleGroup));
   };
   const handlerClickShowConfigColorGroup = (group) => {
-    dispatch(setIdEditingColorGroupArchive(group.id));
+    let { id } = group;
+    dispatch(setIdEditingColorGroupArchive((idGroupEditingColor === id) ? null : id));
   };
   const handlerClickItemSettingColorGroup = (group, color) => {
     ChromeExt.updateGroup(group.id, { color });
     dispatch(setColorGroupArchive({ id: group.id, color }));
   };
 
+  const handlerUnGroupTabs = () => {
+    const groupId = idGroupShowContextMenu;
+    if (!groupId) return;
+
+    let group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+
+    let tabIds = group.tabs.map((tab) => tab.id);
+
+    let tabIdNeedUpdateList = tabIds.map((id) => ({ oldId: id, newId: randomBetween() }));
+    ChromeExt.storage.updateIdTabsForTabsGroupArchive(groupId, tabIdNeedUpdateList);
+
+    ChromeExt.ungroup(groupId, tabIds);
+  };
+
   // Constants
   const COLOR_SETTING = ["grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan", "orange",];
+  const MENU_CONTEXT_GROUP = [
+    { label: t('LABEL_UN_GROUP_TABS'), icon: remove_svg, action: handlerUnGroupTabs },
+  ];
 
   // Constants
 
@@ -219,7 +254,8 @@ const GroupsArchive = () => {
                       onKeyDown={(event) => {
                         // Enter to save
                         if (event.key === "Enter") {
-                          setGroupsEditTitle(groupsEditTitle.filter((id) => id !== group.id));
+                          let groupEditingTitleGroup = groupsEditTitle.filter((id) => id !== group.id);
+                          dispatch(setIdEditingTitleGroupsArchive(groupEditingTitleGroup));
                           ChromeExt.setTitleGroup(group.id, group.title);
                         }
                       }}
@@ -237,7 +273,6 @@ const GroupsArchive = () => {
                       <div className="create-group-and-tabs-archive ml-2" onClick={(event) => handlerCreateGroupWithTabsArchive(event, true, group)}>
                         <div className="pointer-events-none">{open_in_browser_svg()}</div>
                       </div>
-
                       <div className="create-group-and-tabs-archive ml-2" onClick={(event) => handlerCreateGroupWithTabsArchive(event, false, group)}>
                         <div className="pointer-events-none">
                           {open_in_new_svg()}
@@ -251,11 +286,10 @@ const GroupsArchive = () => {
                       <div className="action edit-title-group ml-2" onClick={(event) => handlerClickShowEditTitleGroup(event, group)}>
                         <div className="pointer-events-none">{edit_svg()}</div>
                       </div>
-
-                      <div className="action edit-title-group ml-2 relative" onClick={(event) => handlerClickShowConfigColorGroup(group)}>
+                      <div className="action edit-color-group ml-2 relative" onClick={(event) => handlerClickShowConfigColorGroup(group)}>
                         <div className="pointer-events-none">{palette_svg()}</div>
                         {idGroupEditingColor && idGroupEditingColor == group.id && (
-                          <div className="color-setting absolute z-10 top-1 right-1 w-20 grid grid-cols-3 bg-white shadow-md rounded-md">
+                          <div className="color-setting absolute z-10 top-3 right-1 w-20 grid grid-cols-3 bg-white shadow-md rounded-md">
                             {COLOR_SETTING.map((color) => (
                               <div key={color} className={`action color-item flex items-center justify-center w-4 h-4 rounded-full m-2 cursor-pointer ${color} ${color === group.color ? "active" : ""}`}
                                 onClick={() => {
@@ -268,11 +302,28 @@ const GroupsArchive = () => {
                           </div>
                         )}
                       </div>
-                      <div className="context-menu-group-archive ml-2" onClick={(event) => handlerShowContextMenuGroupArchive(event, group)}>
+                      <div className="context-menu-group-archive ml-2 relative" onClick={(event) => handlerShowContextMenuGroupArchive(event, group)}>
                         <div className="pointer-events-none">{more_vert_svg()}</div>
-                      </div>
-                      <div className="remove-group-archive ml-2" onClick={(event) => handlerRemoveGroupArchive(event, group)}>
-                        <div className="pointer-events-none">{close_svg()}</div>
+                        {idGroupShowContextMenu && (idGroupShowContextMenu == group.id) && (
+                          <div className="w-max absolute z-10 top-3 right-1 bg-white text-gray-900 overflow-hidden shadow-md rounded-md">
+                            {MENU_CONTEXT_GROUP.map((item, index) => (
+                              <div key={index}
+                                className="action context-menu-item flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => {
+                                  item.action();
+                                  dispatch(setIdGroupArchiveShowContextMenu(null));
+                                }}
+                              >
+                                <div className="icon w-4 h-4">
+                                  {item.icon()}
+                                </div>
+                                <div className="text ml-2">
+                                  {item.label}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </>)
                   }
@@ -286,21 +337,23 @@ const GroupsArchive = () => {
                 height: group.collapsed ? 0 : group.tabs.length * 50,
               }}
             >
-              {group.tabs.map((tab) => (
-                <div key={tab.id}
-                  className={`action group-card-item action flex items-center px-4 py-2 select-none relative
-                    status-${tab.status}
-                    ${isTabActive(tab) ? "active" : ""}
-                    ${tabsSelected.find((t) => t.id === tab.id) ? "active" : ""} `}
-                  onClick={(event) => handleClickTabItemInGroup(event, tab, group)}
-                >
-                  <img src={tab.favIconUrl || getIconUrl(tab.url)} alt={`${tab.title} icon`} className="w-6 h-6 mr-2 event-none" onError={processImageError} />
-                  <div className="overflow-hidden event-none">
-                    <div className="title text-gray-500 font-semibold truncate"> {tab.title} </div>
-                    <div className="text-xs text-gray-500 truncate"> {tab.url} </div>
+              <div className="tab-list">
+                {group.tabs.map((tab) => (
+                  <div key={tab.id}
+                    className={`action tab-item group-card-item action flex items-center px-4 py-2 select-none relative
+                      status-${tab.status}
+                      ${isTabActive(tab) ? "active" : ""}
+                      ${tabsSelected.find((t) => t.id === tab.id) ? "selected" : ""} `}
+                    onClick={(event) => handleClickTabItemInGroup(event, tab, group)}
+                  >
+                    <img src={tab.favIconUrl || getIconUrl(tab.url)} alt={`${tab.title} icon`} className="w-6 h-6 mr-2 event-none" onError={processImageError} />
+                    <div className="overflow-hidden event-none">
+                      <div className="title text-gray-500 font-semibold truncate"> {tab.title} </div>
+                      <div className="text-xs text-gray-500 truncate"> {tab.url} </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         ))}

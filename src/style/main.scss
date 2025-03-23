@@ -51,14 +51,10 @@ div {
 .tab-list {
   .tab-item {
     cursor: pointer;
+    min-height: 50px;
 
     &.active {
       position: relative;
-      background-color: #ececec;
-
-      .title {
-        color: #000;
-      }
 
       &::before {
         content: "";
@@ -71,6 +67,14 @@ div {
       }
     }
 
+    &.selected {
+      background-color: #ececec;
+
+      .title {
+        color: #000;
+      }
+    }
+
     &:hover {
       background-color: #ececec;
     }
@@ -79,6 +83,7 @@ div {
 
 .group-list {
   .group-card {
+
     &.grey {
       .group-card-header {
         background-color: var(--grey-bg);
@@ -285,4 +290,12 @@ input.input-search {
 
 .wrap-fav-icon {
   .animate-spin {}
+}
+
+.context-menu-item {
+  .icon {
+    svg {
+      fill: #212121;
+    }
+  }
 }

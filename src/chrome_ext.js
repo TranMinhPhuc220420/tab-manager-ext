@@ -18,6 +18,16 @@ const ChromeExt = {
     });
   },
 
+  reloadTabs: (tabIds) => {
+    return new Promise((resolve, reject) => {
+      tabIds.forEach((tabId) => {
+        chrome.tabs.reload(tabId);
+      });
+      
+      resolve();
+    });
+  },
+
   /**
    * Set tab active
    * 
@@ -121,6 +131,14 @@ const ChromeExt = {
   updateGroup: (groupId, config) => {
     return new Promise((resolve, reject) => {
       chrome.tabGroups.update(groupId, config, (group) => {
+        resolve(group);
+      });
+    });
+  },
+
+  ungroup: (groupId, tabIds) => {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.ungroup(tabIds, (group) => {
         resolve(group);
       });
     });
@@ -283,6 +301,12 @@ const ChromeExt = {
           let index = groupsArchive.findIndex((group) => group.id === groupId);
           if (index !== -1) {
             let tabs = groupsArchive[index].tabs;
+
+            if (!tabs) {
+              resolve(groupsArchive);
+              return;
+            }
+
             tabIdNeedUpdateList.forEach((item) => {
               let tab = tabs.find((tab) => tab.id === item.oldId);
               if (tab) {

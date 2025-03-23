@@ -3,13 +3,13 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSelector, useDispatch } from "react-redux";
-import { setIsShowContextMenuCurrentTabList, setContextMenuPositionCurrentTabList } from "../../store/features/app";
+import { setIdEditingTitleGroupsArchive, setIsShowContextMenuCurrentTabList, setContextMenuPositionCurrentTabList } from "../../store/features/app";
 
 import { getIconUrl } from "../../utils";
 import ChromeExt from "../../chrome_ext";
 
 import {
-  create_new_folder_svg,
+  refresh_svg, add_svg
 } from "../../svg_icon";
 
 const CurrentTabList = () => {
@@ -84,19 +84,46 @@ const CurrentTabList = () => {
   };
   const handlerContextMenuTabItem = (event, tab) => {
     event.preventDefault();
+
+    if (tabsSelected.length === 0) {
+      setTabsSelected([tab]);
+    };
+
     dispatch(setIsShowContextMenuCurrentTabList(true));
-    dispatch(setContextMenuPositionCurrentTabList({ x: event.clientX, y: event.clientY }));
-  };
-    
-  const handlerCreateGroupTabsSelected = () => {
-    let tabIds = tabsSelected.map((tab) => tab.id);
-    ChromeExt.createGroup({ tabIds: tabIds });
+
+    let { clientX, clientY } = event;
+
+    // Check if context menu out of screen
+    let { innerWidth, innerHeight } = window;
+    if (clientX + 150 > innerWidth) {
+      clientX = innerWidth - 150;
+    }
+
+    dispatch(setContextMenuPositionCurrentTabList({ x: clientX, y: clientY }));
   };
 
-  // Constants
-  const CONTEXT_MENU_ITEMS = [
-    { label: "Create group", icon: create_new_folder_svg, action: handlerCreateGroupTabsSelected },
-  ];
+  const handlerCreateGroupTabsSelected = async () => {
+    let tabsToGroup = [...tabsSelected];
+
+    let tabIds = tabsToGroup.map((tab) => tab.id);
+    let groupIdResult = await ChromeExt.createGroup({ tabIds: tabIds });
+
+    setTabsSelected([]);
+    dispatch(setIsShowContextMenuCurrentTabList(false));
+
+    dispatch(setIdEditingTitleGroupsArchive([groupIdResult]));
+    let timeInterval = setInterval(() => {
+      let input = document.querySelector(`div[group-id="${groupIdResult}"] .group-title-input`);
+      if (input) {
+        clearInterval(timeInterval);
+        input.focus();
+      }
+    }, 100);
+  };
+  const handlerReloadTabsSelected = () => {
+    let tabIds = tabsSelected.map((tab) => tab.id);
+    ChromeExt.reloadTabs(tabIds);
+  };
 
   // Lifecycle
   useEffect(() => {
@@ -117,7 +144,7 @@ const CurrentTabList = () => {
         {filterTabsBeforeShow(tabs).map((tab) => (
           <li key={tab.id} className={`action tab-item flex items-center px-4 py-2 select-none
                           ${isTabActive(tab) ? "active" : ""}
-                          ${tabsSelected.find((t) => t.id === tab.id) ? "active" : ""} `}
+                          ${tabsSelected.find((t) => t.id === tab.id) ? "selected" : ""} `}
             onClick={(event) => handleClickTabItem(event, tab)}
             onContextMenu={(event) => handlerContextMenuTabItem(event, tab)}
           >
@@ -132,28 +159,32 @@ const CurrentTabList = () => {
 
       {/* Context menu */}
       {isShowContextMenu && (
-        <div className="context-menu absolute bg-white rounded-md"
+        <div className="context-menu absolute bg-white rounded-md overflow-hidden"
           style={{
             top: contextMenuPosition.y,
             left: contextMenuPosition.x,
           }}
         >
-          {CONTEXT_MENU_ITEMS.map((item, index) => (
-            <div key={index}
-              className="action context-menu-item flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
-              onClick={() => {
-                item.action();
-                dispatch(setIsShowContextMenuCurrentTabList(false));
-              }}
-            >
-              <div className="icon">
-                {item.icon()}
-              </div>
-              <div className="text ml-2">
-                {item.label}
-              </div>
+          <div className="action context-menu-item flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
+            onClick={() => { handlerCreateGroupTabsSelected(); }}
+          >
+            <div className="icon w-4 h-4">
+              {add_svg()}
             </div>
-          ))}
+            <div className="text ml-2">
+              {t('LABEL_CREATE_GROUP')}
+            </div>
+          </div>
+          <div className="action context-menu-item flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
+            onClick={() => { handlerReloadTabsSelected(); }}
+          >
+            <div className="icon w-4 h-4">
+              {refresh_svg()}
+            </div>
+            <div className="text ml-2">
+              {t('LABEL_RELOAD_TABS')}
+            </div>
+          </div>
         </div>
       )}
     </div>

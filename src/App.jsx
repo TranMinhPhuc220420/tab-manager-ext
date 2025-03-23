@@ -3,7 +3,10 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSelector, useDispatch } from "react-redux";
-import { setWindowActiveShowTabList, setIdEditingColorGroupArchive, setIsShowContextMenuCurrentTabList } from "./store/features/app";
+import {
+  setWindowActiveShowTabList, setIdEditingColorGroupArchive, setIsShowContextMenuCurrentTabList,
+  setIdGroupArchiveShowContextMenu
+} from "./store/features/app";
 import { setWindows } from "./store/features/window";
 import { setTabsActive, setTabs } from "./store/features/tab";
 import { setGroups } from "./store/features/group";
@@ -97,13 +100,31 @@ const App = () => {
       groupsArchive[i].is_current = group ? true : false;
 
       // if (action == 'load_tabs') {
-        let tabs = groupsArchive[i].tabs;
-        let tabsCurrent = await ChromeExt.getTabsByGroupId(id);
-        if (!tabs || tabsCurrent.length > 0) {
-          groupsArchive[i].tabs = tabsCurrent;
-        }
+      let tabs = groupsArchive[i].tabs;
+      let tabsCurrent = await ChromeExt.getTabsByGroupId(id);
+      if (!tabs || tabsCurrent.length > 0) {
+        groupsArchive[i].tabs = tabsCurrent;
+      }
       // }
     }
+
+    // Sort groups archive by index tab first
+    groupsArchive = groupsArchive.sort((a, b) => {
+      let { tabs: tabsA, is_current: isCurrentA } = a;
+      let { tabs: tabsB, is_current: isCurrentB } = b;
+      
+      if (isCurrentA && !isCurrentB) return -1;
+      if (!isCurrentA && isCurrentB) return 1;
+
+      if (!tabsA && !tabsB) return 0;
+      if (tabsA && !tabsB) return -1;
+      if (!tabsA && tabsB) return 1;
+
+      let indexA = (tabsA.length > 0) ? tabsA[0].index : 0;
+      let indexB = (tabsB.length > 0) ? tabsB[0].index : 0;
+
+      return indexA - indexB;
+    });
 
     // if (action == 'load_tabs') {
     //   // Remove group have tabs empty
@@ -149,8 +170,8 @@ const App = () => {
       loadWindows();
     });
     ChromeExt.storage.onChange((changes, area) => {
-      console.log(`Storage key "${KEY_GROUPS_ARCHIVE}" in namespace "${area}" changed.`);
-      
+      // console.log(`Storage key "${KEY_GROUPS_ARCHIVE}" in namespace "${area}" changed.`);
+
       if (KEY_GROUPS_ARCHIVE in changes) {
         let groupsArchive = changes[KEY_GROUPS_ARCHIVE].newValue;
         if (groupsArchive) {
@@ -163,10 +184,15 @@ const App = () => {
   // Handler func
   const handlerClickOutside = () => {
     let { target } = event;
-    if (target.classList.contains("action")) return;
 
-    dispatch(setIdEditingColorGroupArchive(null));
-    dispatch(setIsShowContextMenuCurrentTabList(false));
+    if (!target.classList.contains("edit-color-group")) {
+      dispatch(setIdEditingColorGroupArchive(null));
+    }
+
+    if (!target.classList.contains("context-menu-group-archive")) {
+      dispatch(setIdGroupArchiveShowContextMenu(null));
+      dispatch(setIsShowContextMenuCurrentTabList(false));
+    }
   };
 
   // Lifecycle

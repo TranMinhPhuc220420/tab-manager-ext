@@ -8,6 +8,10 @@ const ENGLISH_TRANSLATIONS = {
     'PLACEHOLDER_SEARCH': 'Search...',
     'LABEL_GROUPS_ARCHIVE': 'Groups Archive',
     'LABEL_TABS_CURRENT': 'Current Tabs',
+    'LABEL_CREATE_GROUP': 'Create Group',
+    'LABEL_UN_GROUP_TABS': 'UnGroup tabs',
+    'LABEL_RELOAD_TABS': 'Reload tabs',
+    'LABEL_REMOVE_TABS': 'Remove tabs',
   }
 };
 

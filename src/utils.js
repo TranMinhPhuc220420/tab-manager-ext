@@ -18,32 +18,13 @@ export const getIconUrl = (url) => {
   return publicSVG;
 };
 
-export const ChromeExt = {
-  // Tabs
+export const randomBetween = (min, max) => {
+  if (!min) min = 1_000_000;
+  if (!max) max = 9_999_999;
+  
+  return Math.floor(Math.random() * (max - min + 1) + min);
+};
 
-  /**
-   * Get all tabs
-   * 
-   * @returns {Promise<chrome.tabs.Tab[]>}
-   */
-  getTabs: () => {
-    return new Promise((resolve, reject) => {
-      chrome.tabs.query({}, (tabs) => {
-        resolve(tabs);
-      });
-    });
-  },
-
-  /**
-   * Get active tab
-   * 
-   * @returns {Promise<chrome.tabs.Tab>}
-   */
-  getTabActive: () => {
-    return new Promise((resolve, reject) => {
-      chrome.tabs.query({ active: true }, ([tab]) => {
-        resolve(tab);
-      });
-    });
-  },
-}
+export const sleep = (ms) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
