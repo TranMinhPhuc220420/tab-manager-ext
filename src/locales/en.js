@@ -25,6 +25,7 @@ const ENGLISH_TRANSLATIONS = {
     'LABEL_DELETE_GROUP': 'Delete group',
     'LABEL_MOVE_TO_NEW_WINDOW': 'Move to new window',
     'LABEL_DELETE_TABS': 'Delete tabs',
+    'LABEL_REMOVE_FROM_GROUP': 'Remove from group',
   }
 };
 

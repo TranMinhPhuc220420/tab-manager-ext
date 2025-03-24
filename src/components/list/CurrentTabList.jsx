@@ -126,7 +126,7 @@ const CurrentTabList = () => {
       }
 
       let selectGroupHeight = selectGroupEl.clientHeight;
-      if (clientY + selectGroupHeight >= innerHeight - 50) {
+      if (clientY + selectGroupHeight >= innerHeight - 200) {
         positionMenuChild.isTop = false;
       }
 
@@ -221,6 +221,13 @@ const CurrentTabList = () => {
   const handlerMoveTabsToGroupSelected = (groupId) => {
     let tabIds = tabsSelected.map((tab) => tab.id);
     ChromeExt.moveTabsToGroup(tabIds, groupId);
+
+    // Update tabs for group selected move to
+    let group = groups.find((group) => group.id === groupId);
+    let tabs = group.tabs;
+
+    let tabsNew = [...tabs, ...tabsSelected];
+    ChromeExt.storage.updateTabsInGroupsArchive(groupId, tabsNew);
 
     // Clear tabsSelected
     setTabsSelected([]);

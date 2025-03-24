@@ -222,7 +222,7 @@ const App = () => {
       dispatch(setIsShowContextMenuTabListGroupsArchive(false));
     }
   };
-  
+
   const handlerContextMenuOutside = () => {
     let { target } = event;
 
@@ -232,6 +232,11 @@ const App = () => {
     if (!target.classList.contains("tab-item-in-group-archive")) {
       dispatch(setIsShowContextMenuTabListGroupsArchive(false));
     }
+  };
+
+  const handlerOnScroll = (event) => {
+    dispatch(setIsShowContextMenuCurrentTabList(false));
+    dispatch(setIsShowContextMenuTabListGroupsArchive(false));
   };
 
   // Lifecycle
@@ -285,6 +290,7 @@ const App = () => {
         <div className="flex-grow bg-white overflow-y-auto overflow-x-hidden"
           onClick={(event) => { handlerClickOutside(event); }}
           onContextMenu={(event) => { handlerContextMenuOutside(event); }}
+          onScroll={(event) => { handlerOnScroll(event); }}
         >
           {/* {pageActive === "tab_list_in_window" && <CurrentTabList />}
           {pageActive === "bookmark" && <BookmarkList />} */}

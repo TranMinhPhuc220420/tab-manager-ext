@@ -17,6 +17,7 @@ import {
   expand_more_svg, open_in_browser_svg, open_in_new_svg, close_svg, more_vert_svg,
   edit_svg, done_svg, palette_svg, remove_svg, arrow_upward_svg,
   add_svg, delete_svg, expand_content_svg, drive_file_move_svg, refresh_svg, content_copy_svg, move_to_inbox_svg,
+  expand_svg
 } from "../../svg_icon";
 
 const GroupsArchive = () => {
@@ -56,7 +57,6 @@ const GroupsArchive = () => {
         );
         return { ...group, tabs };
       });
-
     }
 
     // Remove group empty
@@ -64,7 +64,11 @@ const GroupsArchive = () => {
       let tabs = group.tabs;
 
       if (!tabs || tabs.length === 0) {
-        ChromeExt.storage.removeGroupsArchiveById(group.id);
+
+        if (!keySearch) {
+          ChromeExt.storage.removeGroupsArchiveById(group.id);
+        }
+
         return false;
       }
 
@@ -85,12 +89,21 @@ const GroupsArchive = () => {
     let groupCurrent = groups.find((group) => group.id === groupId);
     return groupCurrent;
   };
+  const getIdGroupOfTabsSelected = () => {
+    let groupsId = tabsSelected.map((tab) => tab.groupId);
+    let isSameGroup = groupsId.every((id) => id === groupsId[0]);
+    if (!isSameGroup) return null;
+
+    let groupId = groupsId[0];
+    return groupId;
+  };
   const isShowActionMenuByTabsSelected = (nameAction) => {
     let groupCurrent = getGroupCurrentOfTabsSelected();
 
     switch (nameAction) {
       case 'handlerAddNewTabLeftOrRight':
       case 'handlerReloadTabsSelected':
+      case 'handlerRemoveTabOutOfGroup':
       case 'handlerCloseTabsSelected':
         return groupCurrent ? true : false;
 
@@ -274,19 +287,58 @@ const GroupsArchive = () => {
     if (groupCurrent) {
       tabIds = tabsSelected.map((tab) => tab.id);
     }
+    else {
+      tabIds = [];
+      for (let i = 0; i < tabsSelected.length; i++) {
+        let url = tabsSelected[i].url;
+        let tabResult = await ChromeExt.createTab({ url });
+        tabIds.push(tabResult.id);
+      }
+    }
 
-    ChromeExt.moveTabsToGroup(tabIds, groupId);
+    // Remove tabs selected in group archive and update to storage
+    let groundIdOfTabsSelected = getIdGroupOfTabsSelected();
+    let tabIdsSelected = tabsSelected.map((tab) => tab.id);
+    let tabsOfGroupSelected = groupsArchive.find((group) => group.id === groundIdOfTabsSelected).tabs;
+    let tabsNew = tabsOfGroupSelected.filter((tab) => !tabIdsSelected.includes(tab.id));
+    await ChromeExt.storage.updateTabsInGroupsArchive(groundIdOfTabsSelected, tabsNew);
+
+    // Add tabs in group archive and update to storage
+    let tabsOfGroupMoveTo = groupsArchive.find((group) => group.id === groupId).tabs;
+    let tabsNewGroup = [...tabsOfGroupMoveTo, ...tabsSelected];
+    await ChromeExt.storage.updateTabsInGroupsArchive(groupId, tabsNewGroup);
+
+    await ChromeExt.moveTabsToGroup(tabIds, groupId);
+
+    // Clear tabsSelected
+    setTabsSelected([]);
+  };
+  const handlerRemoveTabOutOfGroup = async () => {
+    let groupCurrent = getGroupCurrentOfTabsSelected();
+    let groupId = groupCurrent.id;
+
+    let tabIds = tabsSelected.map((tab) => tab.id);
+    let tabs = groupCurrent.tabs;
+
+    let tabsNew = tabs.filter((tab) => !tabIds.includes(tab.id));
+    ChromeExt.storage.updateTabsInGroupsArchive(groupId, tabsNew);
+
+    ChromeExt.ungroup(groupId, tabIds);
 
     // Clear tabsSelected
     setTabsSelected([]);
   };
 
-  const handlerContextMenuTabItem = async (event, tab) => {
+  const handlerContextMenuTabItem = async (event, { ...tab }, { ...ground }) => {
     let { clientX, clientY } = event;
     event.preventDefault();
 
     let index = tabsSelected.findIndex((t) => t.id === tab.id);
     if (tabsSelected.length === 0 || index === -1) {
+
+      // Check properties groupId of tab
+      if (!tab.groupId) tab.groupId = ground.id;
+
       setTabsSelected([tab]);
     }
 
@@ -317,7 +369,7 @@ const GroupsArchive = () => {
       }
 
       let selectGroupHeight = selectGroupEl.clientHeight;
-      if (clientY + selectGroupHeight >= innerHeight - 50) {
+      if (clientY + selectGroupHeight >= innerHeight - 200) {
         positionMenuChild.isTop = false;
       }
 
@@ -425,7 +477,9 @@ const GroupsArchive = () => {
     // Clear tabsSelected
     setTabsSelected([]);
 
-    ChromeExt.removeTabs(tabIdsDelete);
+    if (group.is_current) {
+      ChromeExt.removeTabs(tabIdsDelete);
+    }
   };
   const handlerCloseTabsSelected = () => {
     let tabIds = tabsSelected.map((tab) => tab.id);
@@ -474,7 +528,7 @@ const GroupsArchive = () => {
   // Constants
   const MENU_CONTEXT_GROUP = [
     { label: t('LABEL_ADD_TAB_TO_GROUP'), icon: add_svg, action: handlerAddTabToGroup },
-    { label: t('LABEL_UN_GROUP_TABS'), icon: expand_content_svg, action: handlerUnGroupTabs },
+    { label: t('LABEL_UN_GROUP_TABS'), icon: expand_svg, action: handlerUnGroupTabs },
     { type: 'divider' },
     { label: t('LABEL_DELETE_GROUP'), icon: delete_svg, action: handlerDeleteGroupArchive },
   ];
@@ -623,7 +677,7 @@ const GroupsArchive = () => {
                       ${isTabActive(tab) ? "active" : ""}
                       ${tabsSelected.find((t) => t.id === tab.id) ? "selected" : ""} `}
                     onClick={(event) => handleClickTabItemInGroup(event, tab, group)}
-                    onContextMenu={(event) => handlerContextMenuTabItem(event, tab)}
+                    onContextMenu={(event) => handlerContextMenuTabItem(event, tab, group)}
                   >
                     <img src={tab.favIconUrl || getIconUrl(tab.url)} alt={`${tab.title} icon`} className="w-6 h-6 mr-2 pointer-events-none" onError={processImageError} />
                     <div className="overflow-hidden pointer-events-none">
@@ -639,7 +693,10 @@ const GroupsArchive = () => {
       </div>
 
       {/* Context menu */}
-      <div className={`context-menu-tab-list-groups-archive shadow-menu absolute bg-white rounded-md ${!isShowContextMenu ? "opacity-0 -z-50" : "overflow-visible z-10"}`}
+      <div className={`context-menu-tab-list-groups-archive shadow-menu absolute bg-white rounded-md
+                    ${!isShowContextMenu ? "opacity-0 -z-50" : "z-10"}
+                    ${showGroupMoveTo ? "overflow-visible" : "overflow-hidden"}`
+      }
         style={{
           top: contextMenuPosition.y,
           left: contextMenuPosition.x,
@@ -727,7 +784,7 @@ const GroupsArchive = () => {
                 {expand_more_svg()}
               </div>
 
-              <div className={`select-group shadow-menu absolute bg-white rounded-md overflow-hidden shadow-md z-10 w-max
+              <div className={`select-group shadow-menu absolute bg-white rounded-md overflow-hidden shadow-md z-50 w-max
                     ${!showGroupMoveTo ? 'opacity-0 -z-50 pointer-events-none' : ''} 
                     ${positionMenuChild.isLeft ? 'left-5' : 'right-1'}
                     ${positionMenuChild.isTop ? 'top-0' : 'bottom-1'}`}
@@ -751,6 +808,19 @@ const GroupsArchive = () => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {isShowActionMenuByTabsSelected('handlerRemoveTabOutOfGroup') && (
+          <div className="action flex items-center px-2 py-2 hover:bg-gray-100 cursor-pointer"
+            onClick={() => { handlerRemoveTabOutOfGroup(); }}
+          >
+            <div className="icon un-inbox flex items-center justify-center w-4 h-4">
+              {move_to_inbox_svg()}
+            </div>
+            <div className="text ml-2">
+              {t('LABEL_REMOVE_FROM_GROUP')}
             </div>
           </div>
         )}

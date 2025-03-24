@@ -24,6 +24,7 @@ const JAPANESE_TRANSLATIONS = {
     'LABEL_DELETE_GROUP': 'グループを削除',
     'LABEL_MOVE_TO_NEW_WINDOW': '新しいウィンドウに移動',
     'LABEL_DELETE_TABS': 'タブを削除',
+    'LABEL_REMOVE_FROM_GROUP': 'グループから削除',
   }
 };
 
