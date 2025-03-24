@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import {
   setWindowActiveShowTabList, setIdEditingColorGroupArchive, setIsShowContextMenuCurrentTabList,
+  setIsShowContextMenuTabListGroupsArchive,
   setIdGroupArchiveShowContextMenu
 } from "./store/features/app";
 import { setWindows } from "./store/features/window";
@@ -77,6 +78,26 @@ const App = () => {
     for (let i = 0; i < groups.length; i++) {
       groups[i].tabs = await ChromeExt.getTabsByGroupId(groups[i].id);
     }
+
+    // Sort groups by index tab first
+    groups = groups.sort((a, b) => {
+      let { tabs: tabsA, is_current: isCurrentA } = a;
+      let { tabs: tabsB, is_current: isCurrentB } = b;
+
+      if (isCurrentA && !isCurrentB) return -1;
+      if (!isCurrentA && isCurrentB) return 1;
+
+      if (!tabsA && !tabsB) return 0;
+      if (tabsA && !tabsB) return -1;
+      if (!tabsA && tabsB) return 1;
+
+      let indexA = (tabsA.length > 0) ? tabsA[0].index : 0;
+      let indexB = (tabsB.length > 0) ? tabsB[0].index : 0;
+
+      return indexA - indexB;
+    });
+
+
     dispatch(setGroups(groups));
   };
   const loadWindows = async () => {
@@ -112,7 +133,7 @@ const App = () => {
     groupsArchive = groupsArchive.sort((a, b) => {
       let { tabs: tabsA, is_current: isCurrentA } = a;
       let { tabs: tabsB, is_current: isCurrentB } = b;
-      
+
       if (isCurrentA && !isCurrentB) return -1;
       if (!isCurrentA && isCurrentB) return 1;
 
@@ -191,7 +212,25 @@ const App = () => {
 
     if (!target.classList.contains("context-menu-group-archive")) {
       dispatch(setIdGroupArchiveShowContextMenu(null));
+    }
+
+    if (!target.classList.contains("context-menu-item") && !target.classList.contains("context-menu-item-open")) {
       dispatch(setIsShowContextMenuCurrentTabList(false));
+    }
+
+    if (!target.classList.contains("context-menu-item-groups-archive") && !target.classList.contains("context-menu-item-groups-archive-open")) {
+      dispatch(setIsShowContextMenuTabListGroupsArchive(false));
+    }
+  };
+  
+  const handlerContextMenuOutside = () => {
+    let { target } = event;
+
+    if (!target.classList.contains("tab-item-in-current")) {
+      dispatch(setIsShowContextMenuCurrentTabList(false));
+    }
+    if (!target.classList.contains("tab-item-in-group-archive")) {
+      dispatch(setIsShowContextMenuTabListGroupsArchive(false));
     }
   };
 
@@ -243,7 +282,10 @@ const App = () => {
           <FormSearch />
         </div>
 
-        <div className="flex-grow bg-white overflow-y-auto" onClick={(event) => { handlerClickOutside(event); }}>
+        <div className="flex-grow bg-white overflow-y-auto overflow-x-hidden"
+          onClick={(event) => { handlerClickOutside(event); }}
+          onContextMenu={(event) => { handlerContextMenuOutside(event); }}
+        >
           {/* {pageActive === "tab_list_in_window" && <CurrentTabList />}
           {pageActive === "bookmark" && <BookmarkList />} */}
           <GroupsArchive />

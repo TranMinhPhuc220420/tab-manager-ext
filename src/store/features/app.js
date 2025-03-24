@@ -6,12 +6,15 @@ const initialState = {
 
   // current_tab
   is_show_context_menu_current_tab_list: false,
-  context_menu_position_current_tab_list: { x: 0, y: 0 },
+  context_menu_position_current_tab_list: { x: null, y: null },
 
   // groups_archive
   id_editing_title_groups_archive: [],
   id_editing_color_group_archive: null,
   id_group_archive_show_context_menu: null,
+  
+  is_show_context_menu_tab_list_groups_archive: false,
+  context_menu_position_tab_list_groups_archive: { x: null, y: null },
 }
 
 export const counterSlice = createSlice({
@@ -27,7 +30,7 @@ export const counterSlice = createSlice({
 
     // current_tab
     setIsShowContextMenuCurrentTabList: (state, action) => {
-      state.id_group_archive_show_context_menu = null;
+      if (action.payload) state.id_group_archive_show_context_menu = null;
 
       state.is_show_context_menu_current_tab_list = action.payload;
     },
@@ -43,9 +46,15 @@ export const counterSlice = createSlice({
       state.id_editing_color_group_archive = action.payload;
     },
     setIdGroupArchiveShowContextMenu: (state, action) => {
-      state.is_show_context_menu_current_tab_list = false;
+      if (action.payload) state.is_show_context_menu_current_tab_list = false;
       
       state.id_group_archive_show_context_menu = action.payload;
+    },
+    setIsShowContextMenuTabListGroupsArchive: (state, action) => {
+      state.is_show_context_menu_tab_list_groups_archive = action.payload;
+    },
+    setContextMenuPositionTabListGroupsArchive: (state, action) => {
+      state.context_menu_position_tab_list_groups_archive = action.payload;
     },
 
   },
@@ -61,6 +70,8 @@ export const {
   setIdEditingTitleGroupsArchive,
   setIdEditingColorGroupArchive,
   setIdGroupArchiveShowContextMenu,
+  setIsShowContextMenuTabListGroupsArchive,
+  setContextMenuPositionTabListGroupsArchive,
 } = counterSlice.actions;
 
 export default counterSlice.reducer

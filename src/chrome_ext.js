@@ -60,6 +60,42 @@ const ChromeExt = {
     });
   },
 
+  pinTabs: (tabIds) => {
+    return new Promise((resolve, reject) => {
+      tabIds.forEach((tabId) => {
+        chrome.tabs.update(tabId, { pinned: true });
+      });
+      
+      resolve();
+    });
+  },
+
+  unPinTabs: (tabIds) => {
+    return new Promise((resolve, reject) => {
+      tabIds.forEach((tabId) => {
+        chrome.tabs.update(tabId, { pinned: false });
+      });
+      
+      resolve();
+    });
+  },
+
+  removeTabs: (tabIds) => {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.remove(tabIds, () => {
+        resolve();
+      });
+    });
+  },
+
+  moveTabsToGroup: (tabIds, groupId) => {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.group({ tabIds, groupId }, (group) => {
+        resolve(group);
+      });
+    });
+  },
+
   /**
    * Get all tabs
    * 
@@ -123,6 +159,14 @@ const ChromeExt = {
   createGroup: (config) => {
     return new Promise((resolve, reject) => {
       chrome.tabs.group(config, (group) => {
+        resolve(group);
+      });
+    });
+  },
+
+  addTabsToGroup: (groupId, tabIds) => {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.group({ tabIds, groupId }, (group) => {
         resolve(group);
       });
     });
@@ -374,10 +418,19 @@ const ChromeExt = {
       });
     },
 
-    updateTabsInGroupsArchive: (groupsArchive) => {
+    updateTabsInGroupsArchive: (groupId, tabs) => {
       return new Promise((resolve, reject) => {
-        chrome.storage.local.set({ [KEY_GROUPS_ARCHIVE]: groupsArchive }, () => {
-          resolve(groupsArchive);
+        chrome.storage.local.get([KEY_GROUPS_ARCHIVE], (result) => {
+          let groupsArchive = result[KEY_GROUPS_ARCHIVE] || [];
+
+          let index = groupsArchive.findIndex((group) => group.id === groupId);
+          if (index !== -1) {
+            groupsArchive[index].tabs = tabs;
+          }
+
+          chrome.storage.local.set({ [KEY_GROUPS_ARCHIVE]: groupsArchive }, () => {
+            resolve(groupsArchive);
+          });
         });
       });
     },
