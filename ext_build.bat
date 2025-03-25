@@ -1,4 +1,4 @@
 set incDir=ext
 set srcDir=dist
 
-copy %incDir%\* %srcDir%\*
+xcopy %incDir%\* %srcDir%\* /E /Y

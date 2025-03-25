@@ -3,4 +3,4 @@ set srcDir=dist
 
 call npm run build
 
-copy %incDir%\* %srcDir%\*
+call ext_build.bat

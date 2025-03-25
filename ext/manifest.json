@@ -1,8 +1,9 @@
 {
 	"manifest_version": 3,
-	"name": "Tab manager extension",
-	"description": "This extension helps you manage your tabs",
-	"version": "1.1",
+	"name": "__MSG_extension_name__",
+	"description": "__MSG_extension_description__",
+	"version": "1.0",
+	"default_locale": "ja",
 
 	"permissions": [
 		"tabs",
